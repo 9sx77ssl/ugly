@@ -53,7 +53,7 @@ pub fn run_generate(config: &GenerateConfig) -> Result<()> {
         "Pattern: \"{}\" | Threads: {} | CPU: {}%",
         config.pattern, config.threads, config.cpu_limit_percent
     ));
-    pb.set_length(u64::MAX); // indefinite progress bar
+    pb.set_length(u64::MAX);
 
     // Banner
     eprintln!();
@@ -65,6 +65,20 @@ pub fn run_generate(config: &GenerateConfig) -> Result<()> {
     eprintln!("  Output:   {}", config.output_file.display());
     eprintln!("{}", "━".repeat(50));
     eprintln!();
+
+    // Spawn a background thread to update the progress bar
+    let pb_clone = pb.clone();
+    let state_pb = Arc::clone(&state);
+    let pb_thread = std::thread::spawn(move || {
+        while !state_pb.match_found.load(Ordering::Relaxed) {
+            let attempts = state_pb.total_attempts.load(Ordering::Relaxed);
+            pb_clone.set_position(attempts);
+            std::thread::sleep(std::time::Duration::from_millis(500));
+        }
+        // Final update
+        let attempts = state_pb.total_attempts.load(Ordering::Relaxed);
+        pb_clone.set_position(attempts);
+    });
 
     // Run generation with rayon
     let config_clone = config.clone();
@@ -85,6 +99,9 @@ pub fn run_generate(config: &GenerateConfig) -> Result<()> {
         })
     });
 
+    // Wait for progress bar thread
+    let _ = pb_thread.join();
+
     // Check results
     let final_attempts = state.total_attempts.load(Ordering::Relaxed);
 
@@ -94,16 +111,13 @@ pub fn run_generate(config: &GenerateConfig) -> Result<()> {
         return Err(UglyError::Interrupted);
     }
 
-    // If we get here without a match being handled, something went wrong
-    // The actual match handling is done in the worker thread
     // If no match was found and max_attempts reached:
     if config.max_attempts > 0 && final_attempts >= config.max_attempts {
         eprintln!("\n✗ No match found within {} attempts.", config.max_attempts);
         return Err(UglyError::NoMatchFound(config.max_attempts));
     }
 
-    // Match was found and handled in worker — this is a success path
-    // The worker thread prints the match info and saves to file
+    // Match was found and handled in worker thread
     Ok(())
 }
 
@@ -114,10 +128,10 @@ fn worker_thread(
     state: &GenerationState,
 ) {
     let mut batch = keygen::new_batch_buffer(BATCH_SIZE);
-    let mut address_buf = String::with_capacity(44); // max Solana address length
+    let mut address_buf = String::with_capacity(44);
     let mut throttler = Throttler::new(config.cpu_limit_percent);
 
-    let throttle_check_every: u64 = 16; // check throttle every 16 batches
+    let throttle_check_every: u64 = 16;
     let mut batch_counter: u64 = 0;
 
     loop {
@@ -143,10 +157,20 @@ fn worker_thread(
             base58::encode_into(&keypair.public_key, &mut address_buf);
 
             if matcher::matches_prefix(&address_buf, &config.pattern) {
-                // MATCH FOUND!
-                // Set flag to stop other threads
-                state.match_found.store(true, Ordering::Release);
+                // Use compare-and-swap to ensure ONLY ONE thread handles the match
+                let already_handled = state.match_found.compare_exchange(
+                    false,
+                    true,
+                    Ordering::AcqRel,
+                    Ordering::Acquire,
+                );
 
+                if already_handled.is_err() {
+                    // Another thread already found a match, just return
+                    return;
+                }
+
+                // This thread won the race — handle the match
                 let timestamp = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap()
@@ -154,7 +178,7 @@ fn worker_thread(
 
                 let elapsed = state.total_attempts.load(Ordering::Relaxed);
 
-                // Get password once (other threads will wait)
+                // Get password once
                 let password = prompt_for_password();
 
                 // Save to encrypted file
@@ -177,7 +201,6 @@ fn worker_thread(
                 eprintln!("  Total attempts: {}", elapsed);
                 eprintln!("{}", "━".repeat(50));
 
-                // Zeroize handled by Drop on WalletKeyPair
                 return;
             }
         }

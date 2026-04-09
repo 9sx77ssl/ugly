@@ -1,238 +1,255 @@
-# ugly
+# 🔑 ugly
 
 [![CI](https://github.com/9sx77ssl/ugly/actions/workflows/ci.yml/badge.svg)](https://github.com/9sx77ssl/ugly/actions/workflows/ci.yml)
 [![Release](https://github.com/9sx77ssl/ugly/actions/workflows/release.yml/badge.svg)](https://github.com/9sx77ssl/ugly/releases)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Crates.io](https://img.shields.io/badge/crates.io-v1.0.0-orange.svg)](https://crates.io/crates/ugly)
+[![Crates.io](https://img.shields.io/crates/v/ugly.svg)](https://crates.io/crates/ugly)
+[![Downloads](https://img.shields.io/crates/d/ugly.svg)](https://crates.io/crates/ugly)
 
-> High-performance Solana vanity address generator with encrypted storage
+> Молниеносный генератор ванильных адресов для Solana. Шифрует кошельки, не жрёт весь CPU, работает в многопотоке.
 
-## 🚀 Quick Install
+---
 
-### One-liner (Linux / macOS)
+## 📦 Установка
+
+### В одну команду (Linux / macOS)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/9sx77ssl/ugly/main/install.sh | sh
 ```
 
-That's it. The script detects your OS, downloads the pre-built binary, and installs it to `/usr/local/bin`.
+Скрипт скачает готовый бинарник с GitHub Releases и положит в `/usr/local/bin`. Rust не нужен.
 
-### From Source
-
-```bash
-git clone https://github.com/9sx77ssl/ugly.git
-cd ugly
-cargo install --path .
-# or
-cargo build --release && sudo cp target/release/ugly /usr/local/bin/
-```
-
-### Via crates.io
+### Через cargo
 
 ```bash
 cargo install ugly
 ```
 
-## 📖 Usage
+### Из исходников
 
-### Generate a vanity address
+```bash
+git clone https://github.com/9sx77ssl/ugly.git
+cd ugly
+cargo build --release
+sudo cp target/release/ugly /usr/local/bin/
+```
 
-Find a Solana address starting with your pattern:
+---
+
+## 🚀 Быстрый старт
+
+### Найти адрес, начинающийся на «moda»
 
 ```bash
 ugly generate --pattern moda --threads 8
 ```
 
-**Options:**
+Утилита будет генерировать ключи параллельно и проверять, начинается ли адрес на `moda`. Когда найдёт — зашифрует и сохранит в файл.
 
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-p, --pattern` | Pattern to match (prefix) | *(required)* |
-| `-t, --threads` | Number of threads | Auto-detect CPU cores |
-| `--cpu-limit` | CPU usage limit % (10–100) | `85` |
-| `--max-attempts` | Max attempts before giving up (0 = infinite) | `0` |
-| `-o, --output` | Output file for encrypted wallet | `./wallets.enc` |
-
-**CPU limit explained:** `--cpu-limit 50` means the generator will use at most **50% of your CPU capacity**. It adaptively inserts micro-sleeps in the generation loop to keep overall usage around the configured percentage. This prevents your system from becoming unresponsive during generation.
-
-**Output file:** If you don't specify `--output`, wallets are automatically saved to `./wallets.enc` in the current directory when a match is found. The file is encrypted with AES-256-GCM using a key derived from your password via Argon2id.
-
-### Benchmark
-
-Measure how many keys per second your hardware can generate:
+### Посчитать скорость своего железа
 
 ```bash
-ugly benchmark                    # 10-second test
-ugly benchmark --duration 30      # 30-second test
+ugly benchmark
 ```
 
-This tests 1 to N threads (where N = your CPU core count) and recommends the optimal thread count.
+Протестирует от 1 до N потоков и скажет, сколько ключей в секунду выдаёт твоя машина.
 
-### Decrypt
-
-View wallets stored in an encrypted file:
+### Посмотреть сохранённые кошельки
 
 ```bash
 ugly decrypt --file wallets.enc
 ```
 
-You'll be prompted for the password. The private key is displayed in base58 format along with the creation timestamp.
+Расшифрует файл и покажет публичные/приватные ключи.
 
-## 📊 Example Output
+---
 
-### Generate
+## 📖 Все команды
 
-```
-🔑 Ugly v1.0.0 — Solana Vanity Address Generator
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Pattern:  moda
-  Threads:  8
-  CPU:      85%
-  Output:   ./wallets.enc
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+### `ugly generate` — Генерация ванильного адреса
 
-⠋ [00:02:14] [████████████░░░░░░░░░░░░░░░░░░░░░░░░░░] 5,432,198 tries
-  Pattern: "moda" | Threads: 8 | CPU: 85%
-  ⚡ 40,523.14 keys/s | ⏱ ETA: ∞
+Ищет пару ключей, публичный адрес которой начинается с указанного паттерна.
 
-✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓✓ MATCH FOUND!
-  Public Key:  modaXk7vH3mQ9pBzR2fGdL5tYnWjCsEuPa
-  Saved to:    ./wallets.enc
-  Total attempts: 5,432,198
+```bash
+ugly generate --pattern abc --threads 4 --cpu-limit 80 --output my_wallets.enc
 ```
 
-### Benchmark
+| Флаг | Что делает | По умолчанию |
+|------|-----------|--------------|
+| `-p, --pattern` | **Обязательный.** Префикс, который должен быть в начале адреса | — |
+| `-t, --threads` | Сколько потоков использовать | Все ядра CPU |
+| `--cpu-limit` | Ограничение нагрузки на CPU в % (10–100) | 85 |
+| `--max-attempts` | Максимум попыток перед сдачей (0 = бесконечно) | 0 |
+| `-o, --output` | Куда сохранить зашифрованный кошелёк | `./wallets.enc` |
 
-```
-⚡ Benchmark: measuring key generation performance
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Duration: 10 seconds
-  Testing 1..12 threads
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#### Как работает `--cpu-limit`
 
-    1 threads:       12,345.67 keys/sec
-    4 threads:       48,234.12 keys/sec
-    8 threads:       89,456.33 keys/sec
-   12 threads:      121,234.56 keys/sec
+Когда стоит `--cpu-limit 50`, утилита будет нагружать процессор не больше чем на **50%**. Это нужно, чтобы комп не превращался в печку во время генерации. Адаптивные микро-паузы вставляются автоматически каждые 16 батчей.
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-✓ Recommended: 12 threads (121,234.56 keys/sec)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-```
+#### Что будет при нахождении
 
-### Decrypt
+Когда совпадение найдено — **только один поток** обработает результат (через атомарную compare-and-swap операцию). Другие потоки увидят флаг и остановятся. Кошелёк шифруется и сохраняется.
 
-```
-🔓 Decrypted Wallet Information
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Wallet #1:
-    Public Key:  modaXk7vH3mQ9pBzR2fGdL5tYnWjCsEuPa
-    Private Key: 5KjH...64byte_base58_private_key
-    Created:     2026-04-09 14:32:01 UTC
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Total wallets: 1
+### `ugly benchmark` — Замер производительности
+
+Тестирует генерацию ключей на разном количестве потоков, чтобы найти оптимальное.
+
+```bash
+ugly benchmark                # 10 секунд
+ugly benchmark --duration 30  # 30 секунд
 ```
 
-## 🏗 Architecture
+На выходе — таблица «потоки → ключей/сек» и рекомендация лучшего числа потоков.
+
+### `ugly decrypt` — Расшифровка кошельков
+
+Читает зашифрованный `.enc` файл, спрашивает пароль, показывает содержимое.
+
+```bash
+ugly decrypt --file wallets.enc
+```
+
+---
+
+## 🔐 Безопасность
+
+| Что | Как сделано |
+|-----|------------|
+| **Генератор случайных чисел** | `OsRng` — только от ОС, никаких сидам |
+| **Хранение приватных ключей в памяти** | Обнуляются при уничтожении (`ZeroizeOnDrop`) |
+| **Шифрование файлов** | AES-256-GCM — тот же стандарт, что в банковских системах |
+| **Пароль → ключ шифрования** | Argon2id — 64 MB памяти, 3 итерации. Брутфорс пароля будет очень дорогим |
+| **Файл на диске** | Только бинарный формат, никакого plaintext |
+| **Ввод пароля** | Скрытый ввод через TTY — пароль не виден в терминале |
+| **Логи** | Приватные ключи **никогда** не выводятся в логи или консоль (кроме decrypt по запросу) |
+
+### Формат файла `wallets.enc`
+
+```
+Байт  Размер  Содержание
+────  ──────  ──────────
+0     4       Магия: b"UGLY"
+4     1       Версия: 0x01
+5     16      Соль (случайная)
+21    12      Nonce (случайный)
+33    ...     Зашифрованные данные (AES-256-GCM)
+```
+
+После расшифровки каждый кошелёк занимает 104 байта:
+- 32 байта — публичный ключ
+- 64 байта — приватный ключ (seed + public)
+- 8 байт — Unix-время создания
+
+---
+
+## ⚡ Производительность
+
+Тест на **12-ядерном CPU** (3 секунды на итерацию):
+
+| Потоки | Ключей/сек | Масштабирование |
+|--------|-----------|-----------------|
+| 1      | ~55K      | 1x (база)       |
+| 4      | ~199K     | ~3.6x           |
+| 8      | ~279K     | ~5.1x           |
+| 12     | ~321K     | ~5.8x           |
+
+Линейное масштабирование до числа физических ядер. Запуск `ugly benchmark` покажет точные цифры для твоего железа.
+
+---
+
+## 🎯 Сколько времени займёт поиск?
+
+Генерация ванильных адресов — это **вероятностный процесс**. Чем длиннее паттерн, тем экспоненциально больше времени:
+
+| Длина паттерна | Примерно попыток | При ~300K keys/sec |
+|----------------|------------------|-------------------|
+| 1 символ       | ~4               | Мгновенно         |
+| 2 символа      | ~190             | Мгновенно         |
+| 3 символа      | ~9,000           | < 1 секунды       |
+| 4 символа      | ~430,000         | ~1 секунды        |
+| 5 символов     | ~20,000,000      | ~1 минута         |
+| 6 символов     | ~1,000,000,000   | ~55 минут         |
+| 7 символов     | ~48,000,000,000  | ~2 дня            |
+| 8 символов     | ~2,300,000,000,000 | ~3 месяца       |
+
+> ⚠️ Это средние значения. Может повезти за секунду, а может не повезти неделю.
+
+---
+
+## 🏗 Архитектура
 
 ```
 src/
-├── main.rs            # CLI entry point (clap)
-├── cli.rs             # Command definitions
-├── config.rs          # Config validation & defaults
-├── engine.rs          # Generation core (rayon + atomics)
-├── benchmark.rs       # Performance benchmarking
-├── decrypt.rs         # Wallet decryption
-├── error.rs           # Error types (thiserror)
+├── main.rs            → Точка входа, разбор команд
+├── cli.rs             → Команды: generate, benchmark, decrypt
+├── config.rs          → Валидация параметров
+├── engine.rs          → Ядро генерации (rayon + atomics + CAS)
+├── benchmark.rs       → Замер производительности
+├── decrypt.rs         → Расшифровка кошельков
+├── error.rs           → Все типы ошибок
 ├── crypto/
-│   ├── keygen.rs      # ed25519-dalek + OsRng
-│   ├── base58.rs      # Solana base58 encoding
-│   └── matcher.rs     # Prefix matching
+│   ├── keygen.rs      → ed25519 ключи + ZeroizeOnDrop
+│   ├── base58.rs      → Кодирование в base58 (Solana)
+│   └── matcher.rs     → Проверка префикса
 ├── storage/
-│   ├── encrypt.rs     # Argon2id + AES-256-GCM
-│   └── file.rs        # Encrypted binary I/O
+│   ├── encrypt.rs     → Argon2id + AES-256-GCM
+│   └── file.rs        → Бинарный формат .enc файлов
 ├── ui/
-│   ├── progress.rs    # indicatif progress bar
-│   └── stats.rs       # Throughput calculator
+│   └── progress.rs    → Прогресс-бар в терминале
 └── resource/
-    └── throttle.rs    # Adaptive CPU throttling
+    └── throttle.rs    → Адаптивное ограничение CPU
 ```
 
-## 🔐 Security
+### Ключевые технические решения
 
-| Feature | Implementation |
-|---------|---------------|
-| **RNG** | `OsRng` — cryptographically secure, OS-provided entropy only |
-| **Key memory** | `ZeroizeOnDrop` — private keys overwritten on drop |
-| **Encryption** | AES-256-GCM with 12-byte random nonce |
-| **Key derivation** | Argon2id — 64 MB memory, 3 iterations |
-| **Storage** | Binary format — no plaintext on disk |
-| **Password input** | Hidden TTY read via `rpassword` |
-| **Logging** | Zero private key data in any output |
+- **Rayon** — work-stealing thread pool, автоматический баланс нагрузки
+- **AtomicU64 + Ordering::Relaxed** — счётчики без блокировок
+- **Compare-and-Swap (CAS)** — только один поток обрабатывает найденный матч
+- **Batch 4096** — генерация пачками, минимум накладных расходов
+- **Pre-allocated буферы** — нет аллокаций в горячем цикле
+- **ZeroizeOnDrop** — приватные ключи обнуляются при уничтожении
 
-### File format
+---
 
-```
-Offset  Size   Content
-──────  ────   ───────
-0       4      Magic: b"UGLY"
-4       1      Version: 0x01
-5       16     Salt (random)
-21      12     Nonce (random)
-33      ...    AES-256-GCM ciphertext
-
-Decrypted payload (per wallet):
-  32 bytes  — Public key
-  64 bytes  — Private key (seed + public)
-   8 bytes  — Unix timestamp (LE)
-```
-
-## ⚡ Performance
-
-Typical performance on a **12-core / 24-thread** CPU:
-
-| Threads | Keys/sec |
-|---------|----------|
-| 1       | ~57K     |
-| 4       | ~227K    |
-| 8       | ~340K    |
-| 12      | ~355K    |
-
-Run `ugly benchmark` on your own hardware for accurate numbers.
-
-## 🛠 Build from Source
+## 🛠 Build из исходников
 
 ```bash
-# Requirements
-# - Rust 1.70+ (edition 2021)
-
+# Требования: Rust 1.70+
 git clone https://github.com/9sx77ssl/ugly.git
 cd ugly
 cargo build --release
 ./target/release/ugly --help
 ```
 
-### Release profile optimizations
+### Release-профиль (максимальная скорость)
 
 ```toml
 [profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-panic = "abort"
+opt-level = 3       # Полная оптимизация
+lto = true          # Link-time optimization
+codegen-units = 1   # Один юнит компиляции = лучше оптимизация
+panic = "abort"     # Без unwinding = меньше бинарник
 ```
 
-## 📝 License
+---
 
-[MIT](LICENSE) — do whatever you want with this code.
+## ⚠️ Важные предупре
 
-## ⚠️ Disclaimer
+1. **Запомни пароль.** Без него кошельки не восстановить. Никакого «сброса пароля» не существует.
+2. **Бэкапь `wallets.enc`.** Файл можно скопировать — он полностью автономный (содержит соль, nonce и зашифрованные данные).
+3. **Длинные паттерны — это надолго.** 8 символов на обычном CPU = месяцы. Планируй соответственно.
+4. **Не логируй приватные ключи.** Утилита этого не делает, но если ты модифицируешь код — будь осторожен.
 
-Vanity address generation is probabilistic. Longer patterns take exponentially more time:
-- 1 char: ~instant
-- 2 chars: seconds
-- 3 chars: minutes
-- 4 chars: hours to days
-- 5+ chars: potentially weeks
+---
 
-Always back up your `wallets.enc` file and remember your password — **there is no way to recover wallets without the password**.
+## 📝 Лицензия
+
+[MIT](LICENSE) — делай что хочешь.
+
+---
+
+## 🙋 Вопросы?
+
+- [Открыть Issue](https://github.com/9sx77ssl/ugly/issues)
+- [Crates.io](https://crates.io/crates/ugly)

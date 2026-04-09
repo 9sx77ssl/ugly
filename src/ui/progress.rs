@@ -5,9 +5,9 @@ pub fn create_progress_bar() -> ProgressBar {
     let pb = ProgressBar::hidden();
     pb.set_style(
         ProgressStyle::with_template(
-            "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {human_pos} tries\n\
+            "{spinner:.green} [{elapsed_precise}] {pos} keys checked\n\
              {msg}\n\
-             ⚡ {perms:.2} keys/s | ⏱ ETA: {eta}",
+             ⚡ {per_sec} keys/s",
         )
         .unwrap()
         .progress_chars("█▓▒░"),

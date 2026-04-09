@@ -10,28 +10,23 @@ permissions:
 
 jobs:
   build:
-    name: Build ${{ matrix.target }}
+    name: ${{ matrix.target }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          # Linux x86_64
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             os_name: linux
-          # Linux ARM64
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             os_name: linux
-          # macOS x86_64
           - os: macos-latest
             target: x86_64-apple-darwin
             os_name: macos
-          # macOS ARM64 (Apple Silicon)
           - os: macos-latest
             target: aarch64-apple-darwin
             os_name: macos
-          # Windows x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             os_name: windows
@@ -44,60 +39,65 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install cross-compilation tools (Linux ARM64)
+      - name: Cross-compile deps (Linux ARM64)
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu
           echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
 
-      - name: Cache cargo registry
+      - name: Cache
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build release
-        run: cargo build --release --target ${{ matrix.target }} --verbose
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Package artifact
+      - name: Package
         shell: bash
         run: |
           TAG="${{ github.ref_name }}"
-          ARCHIVE_DIR="ugly-$TAG-${{ matrix.target }}-${{ matrix.os_name }}"
-          mkdir -p "$ARCHIVE_DIR"
+          DIR="ugly-$TAG-${{ matrix.target }}-${{ matrix.os_name }}"
+          mkdir -p "$DIR"
 
           if [[ "${{ matrix.os_name }}" == "windows" ]]; then
-            cp "target/${{ matrix.target }}/release/ugly.exe" "$ARCHIVE_DIR/" 2>/dev/null || true
-            # Use PowerShell Compress-Archive for zip
-            powershell -Command "Compress-Archive -Path '$ARCHIVE_DIR/*' -DestinationPath '${ARCHIVE_DIR}.zip'"
+            cp "target/${{ matrix.target }}/release/ugly.exe" "$DIR/" || true
+            7z a "${DIR}.zip" "$DIR/"
           else
-            cp "target/${{ matrix.target }}/release/ugly" "$ARCHIVE_DIR/" 2>/dev/null || true
-            chmod +x "$ARCHIVE_DIR/ugly"
-            tar -czf "${ARCHIVE_DIR}.tar.gz" "$ARCHIVE_DIR/"
+            cp "target/${{ matrix.target }}/release/ugly" "$DIR/" 2>/dev/null || true
+            chmod +x "$DIR/ugly"
+            tar -czf "${DIR}.tar.gz" "$DIR/"
           fi
 
-      - name: Upload artifact
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}
-          path: |
-            *.tar.gz
-            *.zip
+          path: "*.tar.gz"
           retention-days: 5
+        if: matrix.os_name != 'windows'
+
+      - name: Upload (Windows)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: "*.zip"
+          retention-days: 5
+        if: matrix.os_name == 'windows'
 
   release:
-    name: Create GitHub Release
+    name: Publish Release
     needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: artifacts
 
@@ -109,21 +109,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="${{ github.ref_name }}"
+          FILES=$(find artifacts/ -type f -name '*.tar.gz' -o -name '*.zip' | tr '\n' ' ')
 
-          # Collect all archives
-          FILES=()
-          while IFS= read -r -d '' f; do
-            FILES+=("$f")
-          done < <(find artifacts/ -type f \( -name '*.tar.gz' -o -name '*.zip' \) -print0)
-
-          if [ ${#FILES[@]} -eq 0 ]; then
-            echo "No artifacts found, creating empty release"
-            gh release create "$TAG" \
-              --title "ugly $TAG" \
-              --generate-notes
-          else
-            echo "Found ${#FILES[@]} artifacts"
-            gh release create "$TAG" "${FILES[@]}" \
-              --title "ugly $TAG" \
-              --generate-notes
-          fi
+          gh release create "$TAG" $FILES \
+            --title "ugly $TAG" \
+            --generate-notes \
+            --draft=false

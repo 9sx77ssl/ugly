@@ -22,27 +22,38 @@ pub fn run_benchmark(config: &BenchmarkConfig) -> Result<()> {
 
     let mut results: Vec<(usize, f64)> = Vec::with_capacity(num_cpus);
 
+    // Setup Ctrl+C handler ONCE
+    let interrupted = Arc::new(AtomicBool::new(false));
+    let interrupted_clone = Arc::clone(&interrupted);
+    ctrlc::set_handler(move || {
+        if interrupted_clone.swap(true, Ordering::Release) {
+            // Second Ctrl+C — force exit
+            std::process::exit(1);
+        }
+        eprintln!("\n⚠  Benchmark interrupted. Press Ctrl+C again to force quit.");
+    })
+    .expect("Failed to set Ctrl+C handler");
+
     for threads in 1..=num_cpus {
+        if interrupted.load(Ordering::Acquire) {
+            eprintln!("\nBenchmark cancelled.");
+            return Ok(());
+        }
+
         let attempts = Arc::new(AtomicU64::new(0));
-        let running = Arc::new(AtomicBool::new(true));
         let start = Instant::now();
         let duration = Duration::from_secs(config.duration_secs);
 
-        let attempts_clone = Arc::clone(&attempts);
-        let running_clone = Arc::clone(&running);
-
-        // Spawn worker threads using std::thread
+        // Spawn worker threads
         let handles: Vec<_> = (0..threads)
             .map(|_| {
                 let attempts = Arc::clone(&attempts);
-                let running = Arc::clone(&running);
+                let interrupted = Arc::clone(&interrupted);
                 std::thread::spawn(move || {
                     let mut local_count: u64 = 0;
-
-                    // Pre-allocate batch
                     let mut batch = keygen::new_batch_buffer(BATCH_SIZE);
 
-                    while running.load(Ordering::Acquire) && start.elapsed() < duration {
+                    while !interrupted.load(Ordering::Acquire) && start.elapsed() < duration {
                         keygen::generate_keypair_batch(&mut batch);
                         local_count += BATCH_SIZE as u64;
                         attempts.fetch_add(BATCH_SIZE as u64, Ordering::Relaxed);
@@ -53,24 +64,17 @@ pub fn run_benchmark(config: &BenchmarkConfig) -> Result<()> {
             })
             .collect();
 
-        // Ctrl+C handler for current iteration
-        let running_inner = Arc::clone(&running_clone);
-        let _ = ctrlc::set_handler(move || {
-            eprintln!("\n⚠  Benchmark interrupted.");
-            running_inner.store(false, Ordering::Release);
-        });
-
         for h in handles {
             let _ = h.join();
         }
 
-        if !running_clone.load(Ordering::Acquire) {
+        if interrupted.load(Ordering::Acquire) {
             eprintln!("\nBenchmark cancelled.");
             return Ok(());
         }
 
         let elapsed = start.elapsed().as_secs_f64();
-        let total = attempts_clone.load(Ordering::Relaxed);
+        let total = attempts.load(Ordering::Relaxed);
         let kps = if elapsed > 0.0 {
             total as f64 / elapsed
         } else {

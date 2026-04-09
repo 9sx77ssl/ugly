@@ -33,9 +33,6 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Check formatting
-        run: cargo fmt --check || true
-
       - name: Clippy (lint)
         run: cargo clippy -- -D warnings
 
@@ -48,8 +45,13 @@ jobs:
       - name: Build release
         run: cargo build --release
 
-      - name: Test help command
-        run: ./target/release/ugly --help
+      - name: Verify CLI
+        run: |
+          ./target/release/ugly --version
+          ./target/release/ugly --help
+          ./target/release/ugly generate --help
+          ./target/release/ugly benchmark --help
+          ./target/release/ugly decrypt --help
 
-      - name: Test benchmark (quick)
-        run: ./target/release/ugly benchmark --duration 1
+      - name: Quick benchmark (3s per thread count)
+        run: ./target/release/ugly benchmark --duration 3
