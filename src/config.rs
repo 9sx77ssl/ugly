@@ -58,7 +58,7 @@ impl AppConfig {
                 };
 
                 // Validate CPU limit
-                if cpu_limit < 10 || cpu_limit > 100 {
+                if !(10..=100).contains(&cpu_limit) {
                     return Err(UglyError::InvalidCpuLimit);
                 }
 

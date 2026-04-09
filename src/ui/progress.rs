@@ -16,6 +16,7 @@ pub fn create_progress_bar() -> ProgressBar {
     pb
 }
 
+#[allow(dead_code)]
 pub fn format_duration(d: Duration) -> String {
     let secs = d.as_secs();
     let hours = secs / 3600;

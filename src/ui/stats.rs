@@ -1,17 +1,20 @@
 use std::time::{Duration, Instant};
 
+#[allow(dead_code)]
 pub struct PerformanceStats {
     pub keys_per_second: f64,
     pub elapsed: Duration,
     pub total_attempts: u64,
 }
 
+#[allow(dead_code)]
 pub struct StatsCalculator {
     start_time: Instant,
     last_update: Instant,
     last_attempts: u64,
 }
 
+#[allow(dead_code)]
 impl StatsCalculator {
     pub fn new() -> Self {
         let now = Instant::now();

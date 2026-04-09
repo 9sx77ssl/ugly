@@ -11,13 +11,17 @@ const VERSION: u8 = 0x01;
 const SALT_LEN: usize = 16;
 const HEADER_LEN: usize = 4 + 1 + SALT_LEN; // magic + version + salt
 
+/// Decrypted wallet data from file.
+pub type DecryptedWallets = (Vec<[u8; 32]>, Vec<[u8; 64]>, Vec<u64>);
+
 /// File format:
 /// [0..4]   Magic: b"UGLY"
 /// [4..5]   Version: 0x01
 /// [5..21]  Salt (16 bytes)
 /// [21..]   Nonce(12) + AES-256-GCM ciphertext
-
+///
 /// Encrypt and write wallet data to file.
+#[allow(dead_code)]
 pub fn write_encrypted(
     path: &Path,
     public_key: &[u8; 32],
@@ -56,11 +60,11 @@ pub fn write_encrypted(
 }
 
 /// Read and decrypt wallet data from file.
-/// Returns (public_key, private_key, timestamp).
+/// Returns (public_keys, private_keys, timestamps).
 pub fn read_encrypted(
     path: &Path,
     password: &str,
-) -> Result<(Vec<[u8; 32]>, Vec<[u8; 64]>, Vec<u64>)> {
+) -> Result<DecryptedWallets> {
     let file_data = fs::read(path)?;
 
     // Validate header

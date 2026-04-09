@@ -1,5 +1,6 @@
 use thiserror::Error;
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Error, Debug)]
 pub enum UglyError {
     #[error("Invalid pattern: '{0}' — must be 1-32 alphanumeric characters")]
@@ -11,6 +12,7 @@ pub enum UglyError {
     #[error("CPU limit must be between 10 and 100")]
     InvalidCpuLimit,
 
+    #[allow(dead_code)]
     #[error("Memory limit exceeded: {0} MB used (limit: 512 MB)")]
     MemoryLimitExceeded(u64),
 
@@ -35,6 +37,7 @@ pub enum UglyError {
     #[error("No match found within {0} attempts")]
     NoMatchFound(u64),
 
+    #[allow(dead_code)]
     #[error("Benchmark interrupted")]
     BenchmarkInterrupted,
 

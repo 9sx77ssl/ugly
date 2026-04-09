@@ -189,7 +189,7 @@ fn worker_thread(
 
         // Throttle check
         batch_counter += 1;
-        if batch_counter % throttle_check_every == 0 {
+        if batch_counter.is_multiple_of(throttle_check_every) {
             throttler.maybe_sleep();
         }
     }
