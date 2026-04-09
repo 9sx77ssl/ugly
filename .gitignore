@@ -1,0 +1,24 @@
+# Build artifacts
+/target
+**/*.rs.bk
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Wallet files (sensitive!)
+*.enc
+wallets.enc
+
+# Lock file - commit for reproducible builds
+# Cargo.lock
+
+# Environment
+.env
