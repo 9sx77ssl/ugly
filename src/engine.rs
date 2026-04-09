@@ -54,6 +54,9 @@ pub fn run_generate(config: &GenerateConfig) -> Result<()> {
     })
     .expect("Failed to set Ctrl+C handler");
 
+    // Reset progress flag
+    progress::PROGRESS_DONE.store(false, Ordering::Release);
+
     // Banner
     eprintln!();
     eprintln!("ugly v{} -- Solana Vanity Address Generator", env!("CARGO_PKG_VERSION"));
@@ -94,11 +97,6 @@ pub fn run_generate(config: &GenerateConfig) -> Result<()> {
 
             std::thread::sleep(Duration::from_millis(200));
         }
-        // Final update
-        let attempts = state_bg.total_attempts.load(Ordering::Relaxed);
-        let elapsed = Instant::now().duration_since(time_bg);
-        progress::print_progress(elapsed, attempts, 0.0);
-        progress::clear_progress();
     });
 
     // Rayon thread pool
@@ -178,6 +176,9 @@ fn worker_thread(
                     return;
                 }
 
+                // Stop progress thread immediately
+                progress::clear_progress();
+
                 // Winner thread handles saving
                 handle_match(&address_buf, keypair, config, state);
                 return;
@@ -202,8 +203,6 @@ fn handle_match(
     config: &GenerateConfig,
     state: &GenerationState,
 ) {
-    progress::clear_progress();
-
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
@@ -240,7 +239,7 @@ fn handle_match(
     );
 
     eprintln!();
-    eprintln!("{} MATCH FOUND {}", sep(), sep());
+    eprintln!("{}", sep());
     eprintln!("  Address:       {}", address);
     if save_result.is_ok() {
         eprintln!("  Saved to:      {}", config.output_file.display());
