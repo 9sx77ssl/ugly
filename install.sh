@@ -86,10 +86,10 @@ VERSION="latest"
 
 get_latest_version() {
     info "Checking latest release..."
-    VERSION="$(curl -fsSL "https://api.github.com/repos/$GITHUB_REPO/releases/latest" \
+    VERSION="$(curl -fsSL --max-time 10 "https://api.github.com/repos/$GITHUB_REPO/releases/latest" 2>/dev/null \
         | grep -o '"tag_name":"[^"]*"' \
         | head -1 \
-        | cut -d'"' -f4)"
+        | cut -d'"' -f4 || true)"
 
     if [ -z "$VERSION" ]; then
         warn "Could not fetch latest version, falling back to v1.0.0"
@@ -120,8 +120,9 @@ download_and_install() {
     info "Downloading $VERSION for $OS ($ARCH)..."
     info "URL: $url"
 
-    if ! curl -fsSL -o "$tarball" "$url" 2>/dev/null; then
-        warn "Binary not available for this platform yet. Falling back to building from source..."
+    if ! curl -fsSL --max-time 30 -o "$tarball" "$url" 2>/dev/null; then
+        warn "Binary not available for this platform yet."
+        warn "Falling back to building from source..."
         rm -rf "$tmp_dir"
         build_from_source
         return
