@@ -2,8 +2,14 @@
 name = "ugly"
 version = "1.0.0"
 edition = "2021"
-description = "Solana address generator"
+description = "High-performance Solana vanity address generator with encrypted storage"
 license = "MIT"
+repository = "https://github.com/9sx77ssl/ugly"
+documentation = "https://github.com/9sx77ssl/ugly#readme"
+homepage = "https://github.com/9sx77ssl/ugly"
+readme = "README.md"
+keywords = ["solana", "vanity", "address", "generator", "ed25519"]
+categories = ["command-line-utilities", "cryptography"]
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }
