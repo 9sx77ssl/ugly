@@ -5,12 +5,17 @@ use crate::crypto::base58;
 use crate::error::{Result, UglyError};
 use crate::storage::file;
 
+/// Separator line.
+fn sep() -> String {
+    "─".repeat(50)
+}
+
 /// Run the decrypt command.
 pub fn run_decrypt(config: &DecryptConfig) -> Result<()> {
     let path = Path::new(&config.file);
 
     if !path.exists() {
-        eprintln!("✗ File not found: {}", config.file.display());
+        eprintln!("x File not found: {}", config.file.display());
         return Err(UglyError::IoError(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             format!("File not found: {}", config.file.display()),
@@ -26,8 +31,8 @@ pub fn run_decrypt(config: &DecryptConfig) -> Result<()> {
         file::read_encrypted(path, &password)?;
 
     eprintln!();
-    eprintln!("🔓 Decrypted Wallet Information");
-    eprintln!("{}", "━".repeat(50));
+    eprintln!("Decrypted Wallet Information");
+    eprintln!("{}", sep());
 
     if public_keys.is_empty() {
         eprintln!("  No wallets found in file.");
@@ -39,12 +44,10 @@ pub fn run_decrypt(config: &DecryptConfig) -> Result<()> {
 
             let pub_addr = base58::encode(pub_key);
             let priv_addr = base58::encode(priv_key);
-
-            // Format timestamp
             let dt = format_timestamp(ts);
 
             eprintln!("  Wallet #{}:", i + 1);
-            eprintln!("    Public Key:  {}", pub_addr);
+            eprintln!("    Address:     {}", pub_addr);
             eprintln!("    Private Key: {}", priv_addr);
             eprintln!("    Created:     {}", dt);
             if i < public_keys.len() - 1 {
@@ -53,7 +56,7 @@ pub fn run_decrypt(config: &DecryptConfig) -> Result<()> {
         }
     }
 
-    eprintln!("{}", "━".repeat(50));
+    eprintln!("{}", sep());
     eprintln!("  Total wallets: {}", public_keys.len());
     eprintln!();
 
@@ -61,7 +64,6 @@ pub fn run_decrypt(config: &DecryptConfig) -> Result<()> {
 }
 
 fn format_timestamp(unix_secs: u64) -> String {
-    // Simple UTC timestamp formatting
     let total_secs = unix_secs;
     let days_since_epoch = total_secs / 86400;
     let time_of_day = total_secs % 86400;
@@ -70,7 +72,6 @@ fn format_timestamp(unix_secs: u64) -> String {
     let minutes = (time_of_day % 3600) / 60;
     let seconds = time_of_day % 60;
 
-    // Calculate date from days since epoch (1970-01-01)
     let mut year = 1970u64;
     let mut remaining_days = days_since_epoch;
 

@@ -8,16 +8,20 @@ use crate::error::Result;
 
 const BATCH_SIZE: usize = 4096;
 
+fn sep() -> String {
+    "─".repeat(50)
+}
+
 /// Run the benchmark command.
 pub fn run_benchmark(config: &BenchmarkConfig) -> Result<()> {
     let num_cpus = num_cpus::get();
 
     eprintln!();
-    eprintln!("⚡ Benchmark: measuring key generation performance");
-    eprintln!("{}", "━".repeat(50));
+    eprintln!("Benchmark: measuring key generation performance");
+    eprintln!("{}", sep());
     eprintln!("  Duration: {} seconds", config.duration_secs);
     eprintln!("  Testing 1..{} threads", num_cpus);
-    eprintln!("{}", "━".repeat(50));
+    eprintln!("{}", sep());
     eprintln!();
 
     let mut results: Vec<(usize, f64)> = Vec::with_capacity(num_cpus);
@@ -30,7 +34,7 @@ pub fn run_benchmark(config: &BenchmarkConfig) -> Result<()> {
             // Second Ctrl+C — force exit
             std::process::exit(1);
         }
-        eprintln!("\n⚠  Benchmark interrupted. Press Ctrl+C again to force quit.");
+        eprintln!("\n[!] Benchmark interrupted. Press Ctrl+C again to force quit.");
     })
     .expect("Failed to set Ctrl+C handler");
 
@@ -88,12 +92,12 @@ pub fn run_benchmark(config: &BenchmarkConfig) -> Result<()> {
     // Find best
     if let Some(best) = results.iter().max_by(|a, b| a.1.partial_cmp(&b.1).unwrap()) {
         eprintln!();
-        eprintln!("{}", "━".repeat(50));
+        eprintln!("{}", sep());
         eprintln!(
-            "✓ Recommended: {} threads ({:.2} keys/sec)",
+            "Recommended: {} threads ({:.2} keys/sec)",
             best.0, best.1
         );
-        eprintln!("{}", "━".repeat(50));
+        eprintln!("{}", sep());
     }
 
     Ok(())

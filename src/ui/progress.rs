@@ -1,19 +1,22 @@
-use indicatif::{ProgressBar, ProgressStyle};
 use std::time::Duration;
 
-pub fn create_progress_bar() -> ProgressBar {
-    let pb = ProgressBar::hidden();
-    pb.set_style(
-        ProgressStyle::with_template(
-            "{spinner:.green} [{elapsed_precise}] {pos} keys checked\n\
-             {msg}\n\
-             ⚡ {per_sec} keys/s",
-        )
-        .unwrap()
-        .progress_chars("█▓▒░"),
+/// Print a progress status line. Uses \r to overwrite the current line.
+pub fn print_progress(elapsed: Duration, attempts: u64, kps: f64) {
+    let secs = elapsed.as_secs();
+    let mins = secs / 60;
+    let hrs = mins / 60;
+    let rem_mins = mins % 60;
+    let rem_secs = secs % 60;
+
+    eprint!(
+        "\r  [{:02}:{:02}:{:02}] {} keys checked | {:.0}/s",
+        hrs, rem_mins, rem_secs, attempts, kps
     );
-    pb.enable_steady_tick(Duration::from_millis(1000));
-    pb
+}
+
+/// Clear the progress line and move to next line.
+pub fn clear_progress() {
+    eprintln!();
 }
 
 #[allow(dead_code)]

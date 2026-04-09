@@ -174,3 +174,17 @@ pub fn append_wallet_entry(
 
     Ok(())
 }
+
+/// Check if a public key already exists in the encrypted file.
+/// Returns Ok(true) if found, Ok(false) if not found, Err if decryption fails.
+pub fn contains_public_key(
+    path: &Path,
+    password: &str,
+    public_key: &[u8; 32],
+) -> Result<bool> {
+    if !path.exists() {
+        return Ok(false);
+    }
+    let (pubs, _, _) = read_encrypted(path, password)?;
+    Ok(pubs.iter().any(|pk| pk == public_key))
+}

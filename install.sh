@@ -132,7 +132,7 @@ verify_install() {
     if command -v ugly &>/dev/null; then
         echo ""
         echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
-        echo -e "${BOLD}🔑 ugly installed successfully!${RESET}"
+        echo -e "${BOLD}ugly installed successfully!${RESET}"
         echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
         echo ""
         ugly --version
@@ -152,7 +152,7 @@ verify_install() {
 # ── Main ─────────────────────────────────────────────────────────
 main() {
     echo ""
-    echo -e "${BOLD}🔑 ugly — Solana Vanity Address Generator${RESET}"
+    echo -e "${BOLD}ugly -- Solana Vanity Address Generator${RESET}"
     echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}"
     echo ""
 
