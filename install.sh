@@ -113,6 +113,13 @@ download_and_install() {
     fi
 
     info "Installing to $INSTALL_DIR/ugly..."
+
+    if command -v ugly &>/dev/null; then
+        local old_version
+        old_version="$(ugly --version 2>&1 || echo 'unknown')"
+        warn "Upgrading: $old_version → $VERSION"
+    fi
+
     sudo cp "$binary" "$INSTALL_DIR/ugly"
     sudo chmod +x "$INSTALL_DIR/ugly"
 
